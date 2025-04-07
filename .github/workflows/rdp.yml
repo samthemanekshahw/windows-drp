@@ -12,12 +12,11 @@ jobs:
     - name: Download ngrok
       run: |
         Invoke-WebRequest -Uri https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-stable-windows-amd64.zip -OutFile ngrok.zip
-        Expand-Archive ngrok.zip
-        move ngrok.exe C:\ngrok.exe
+        Expand-Archive -Path ngrok.zip -DestinationPath .
+        Move-Item -Path .\ngrok.exe -Destination C:\ngrok.exe
 
     - name: Authenticate ngrok
       run: C:\ngrok.exe authtoken 2vNeVcaF7wR5lqiuF0K8Q0Dj7r7_2DsBg35NHL6wqn6LgbcJY
-
     - name: Enable RDP
       run: |
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\' -Name "fDenyTSConnections" -Value 0

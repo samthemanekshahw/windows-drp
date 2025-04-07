@@ -1,32 +1,31 @@
-name: Free RDP via Cloudflare Tunnel
+name: Free RDP with Cloudflare Tunnel
 
-on: 
+on:
   workflow_dispatch:
 
 jobs:
-  rdp:
+  build:
     runs-on: windows-latest
+    timeout-minutes: 360
+
     steps:
-      - name: Enable RDP
-        run: |
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
-          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+    - name: Enable RDP, Set Password, Start Cloudflare Tunnel
+      run: |
+        # Set RDP login password
+        net user runneradmin YourStrongPassword123!
 
-      - name: Set RDP Password
-        run: |
-          net user runneradmin YourStrongPassword123!
+        # Enable RDP access
+        Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Value 0
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 
-      - name: Download cloudflared
-        run: |
-          Invoke-WebRequest -Uri "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe" -OutFile "C:\cloudflared.exe"
+        # Download cloudflared
+        Invoke-WebRequest -Uri "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe" -OutFile "C:\cloudflared.exe"
 
-      - name: Start Tunnel
-        run: |
-          Start-Process -NoNewWindow -FilePath "C:\cloudflared.exe" -ArgumentList "tunnel", "--url", "rdp://localhost:3389"
-          Start-Sleep -Seconds 15
+        # Start the tunnel
+        Start-Process -NoNewWindow -FilePath "C:\cloudflared.exe" -ArgumentList "tunnel", "--url", "rdp://localhost:3389"
 
-      - name: Keep alive for 6 hours
-        run: |
-          Write-Host "RDP is ready. Login using runneradmin / YourStrongPassword123!"
-          Write-Host "Tunnel URL will appear in the previous log step."
-          Start-Sleep -Seconds 21600
+        # Wait a bit and keep the runner alive
+        Start-Sleep -Seconds 10
+        Write-Host "RDP is ready. Login using runneradmin / YourStrongPassword123!"
+        Write-Host "Tunnel URL will appear in the previous step logs."
+        ping 127.0.0.1 -n 21600 > nul

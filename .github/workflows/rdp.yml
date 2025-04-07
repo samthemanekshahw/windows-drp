@@ -1,35 +1,26 @@
-name: Free RDP with AdsPower
+name: RDP Windows Setup
 
-on: workflow_dispatch
+on: [workflow_dispatch]
 
 jobs:
   build:
     runs-on: windows-latest
-    timeout-minutes: 360
-
     steps:
-      - name: Download Cloudflared
-        run: |
-          Invoke-WebRequest -Uri https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe -OutFile cloudflared.exe
-          Move-Item -Path cloudflared.exe -Destination C:\cloudflared.exe
+    - name: Download & Extract Cloudflared
+      run: |
+        Invoke-WebRequest -Uri "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe" -OutFile "cloudflared.exe"
 
-      - name: Enable RDP and open firewall
-        run: |
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
-          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+    - name: Enable RDP
+      run: |
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 
-      - name: Start Cloudflare Tunnel
-        run: |
-          Start-Process -NoNewWindow -FilePath "C:\cloudflared.exe" -ArgumentList "tunnel", "--url", "rdp://localhost:3389"
+    - name: Start Tunnel
+      run: |
+        Start-Process -NoNewWindow -FilePath "cloudflared.exe" -ArgumentList "tunnel", "--url", "rdp://localhost:3389"
+        Start-Sleep -s 10
 
-      - name: Download and Install AdsPower
-        run: |
-          Invoke-WebRequest -Uri "https://www.adspower.com/download/win/latest" -OutFile "AdsPowerSetup.exe"
-          Start-Process -FilePath "AdsPowerSetup.exe" -ArgumentList "/VERYSILENT" -Wait
-
-      - name: Show status and wait
-        run: |
-          Write-Output "Wait 20s for tunnel..."
-          Start-Sleep -Seconds 20
-          Write-Output "RDP should now be accessible!"
-          Start-Sleep -Seconds 18000 # Keep alive for 5 hours
+    - name: Show Tunnel URL
+      run: |
+        Invoke-WebRequest -Uri "http://127.0.0.1:4040/api/tunnels" -UseBasicParsing | Out-File tunnel.json
+        Get-Content tunnel.json

@@ -1,26 +1,32 @@
-name: RDP Windows Setup
+name: Free RDP via Cloudflare Tunnel
 
-on: [workflow_dispatch]
+on: 
+  workflow_dispatch:
 
 jobs:
-  build:
+  rdp:
     runs-on: windows-latest
     steps:
-    - name: Download & Extract Cloudflared
-      run: |
-        Invoke-WebRequest -Uri "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe" -OutFile "cloudflared.exe"
+      - name: Enable RDP
+        run: |
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 
-    - name: Enable RDP
-      run: |
-        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
-        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+      - name: Set RDP Password
+        run: |
+          net user runneradmin YourStrongPassword123!
 
-    - name: Start Tunnel
-      run: |
-        Start-Process -NoNewWindow -FilePath "cloudflared.exe" -ArgumentList "tunnel", "--url", "rdp://localhost:3389"
-        Start-Sleep -s 10
+      - name: Download cloudflared
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe" -OutFile "C:\cloudflared.exe"
 
-    - name: Show Tunnel URL
-      run: |
-        Invoke-WebRequest -Uri "http://127.0.0.1:4040/api/tunnels" -UseBasicParsing | Out-File tunnel.json
-        Get-Content tunnel.json
+      - name: Start Tunnel
+        run: |
+          Start-Process -NoNewWindow -FilePath "C:\cloudflared.exe" -ArgumentList "tunnel", "--url", "rdp://localhost:3389"
+          Start-Sleep -Seconds 15
+
+      - name: Keep alive for 6 hours
+        run: |
+          Write-Host "RDP is ready. Login using runneradmin / YourStrongPassword123!"
+          Write-Host "Tunnel URL will appear in the previous log step."
+          Start-Sleep -Seconds 21600
